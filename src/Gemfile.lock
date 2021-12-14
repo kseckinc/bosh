@@ -168,7 +168,6 @@ GEM
     mime-types-data (3.2019.1009)
     minitar (0.9)
     minitest (5.14.4)
-    mono_logger (1.1.0)
     mtrc (0.0.4)
     multi_json (1.14.1)
     mustermann (1.1.1)
@@ -316,7 +315,6 @@ DEPENDENCIES
   json (= 2.3.0)
   machinist (~> 1.0)
   minitar
-  mono_logger
   mysql2
   nats-pure (~> 0.6.2)
   net-ssh
