@@ -1,6 +1,5 @@
 require 'yaml'
 require 'bosh/dev/sandbox/main'
-require 'bosh/dev/legacy_agent_manager'
 require 'bosh/dev/verify_multidigest_manager'
 require 'bosh/dev/gnatsd_manager'
 
@@ -348,10 +347,6 @@ module IntegrationExampleGroup
     end
   end
 
-  def get_legacy_agent_path(legacy_agent_name)
-    Bosh::Dev::LegacyAgentManager.generate_executable_full_path(legacy_agent_name)
-  end
-
   private
 
   def sub_in_records(output, regex_pattern, replace_pattern)
@@ -374,16 +369,14 @@ module IntegrationSandboxHelpers
   def start_sandbox
     unless sandbox_started?
       at_exit do
-        begin
-          status = $! ? ($!.is_a?(::SystemExit) ? $!.status : 1) : 0
-          logger.info("\n  Stopping sandboxed environment for BOSH tests...")
-          current_sandbox.stop
-          cleanup_client_sandbox_dir
-        rescue StandardError => e
-          logger.error "Failed to stop sandbox! #{e.message}\n#{e.backtrace.join("\n")}"
-        ensure
-          exit(status)
-        end
+        status = $! ? ($!.is_a?(::SystemExit) ? $!.status : 1) : 0
+        logger.info("\n  Stopping sandboxed environment for BOSH tests...")
+        current_sandbox.stop
+        cleanup_client_sandbox_dir
+      rescue StandardError => e
+        logger.error "Failed to stop sandbox! #{e.message}\n#{e.backtrace.join("\n")}"
+      ensure
+        exit(status)
       end
     end
 

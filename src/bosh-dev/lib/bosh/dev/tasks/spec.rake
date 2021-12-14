@@ -7,7 +7,6 @@ require 'bosh/dev/sandbox/workspace'
 require 'common/thread_pool'
 require 'bosh/dev/sandbox/services/uaa_service'
 require 'bosh/dev/sandbox/services/config_server_service'
-require 'bosh/dev/legacy_agent_manager'
 require 'bosh/dev/verify_multidigest_manager'
 require 'bosh/dev/gnatsd_manager'
 require 'bosh/dev/test_runner'
@@ -34,8 +33,6 @@ namespace :spec do
           Bosh::Dev::Sandbox::UaaService.install unless ENV['SKIP_UAA'] == 'true'
 
           Bosh::Dev::Sandbox::ConfigServerService.install unless ENV['SKIP_CONFIG_SERVER'] == 'true'
-
-          Bosh::Dev::LegacyAgentManager.install unless ENV['SKIP_LEGACY_AGENTS'] == 'true'
 
           Bosh::Dev::VerifyMultidigestManager.install unless ENV['SKIP_VERIFY_MULTIDIGEST'] == 'true'
 

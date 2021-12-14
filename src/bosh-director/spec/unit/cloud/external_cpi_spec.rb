@@ -657,8 +657,7 @@ describe Bosh::Clouds::ExternalCpi do
       allow(File).to receive(:executable?).with(asset('bin/dummy_cpi')).and_return(true)
       allow(Open3).to receive(:popen3).and_wrap_original do |original_method, *args, &block|
         # We need to make sure Open3.popen3 gets called with a env path where ruby exists.
-        # We happen to know it is /usr/local/bin/ in this case.
-        args[0]['PATH'] += ':/usr/local/bin'
+        args[0]['PATH'] += ":#{ENV['PATH']}"
         original_method.call(*args, &block)
       end
     end

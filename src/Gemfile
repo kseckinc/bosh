@@ -6,13 +6,12 @@ gem 'bosh-core', path: 'bosh-core'
 gem 'bosh-director', path: 'bosh-director'
 gem 'bosh-director-core', path: 'bosh-director-core'
 gem 'bosh-monitor', path: 'bosh-monitor'
-gem 'bosh-registry', path: 'bosh-registry'
 gem 'bosh-template', path: 'bosh-template'
 gem 'bosh_common', path: 'bosh_common'
 
 gem 'rake', '~>13.0.3'
 
-# json version is hardcoded in release director, health_monitor and registry packages
+# json version is hardcoded in release director, health_monitor packages
 # when modified needs to be updated there as well
 gem 'json', '=2.3.0'
 
@@ -73,6 +72,4 @@ group :development, :test do
 
   gem 'unix-crypt'
 
-  # for registry
-  gem 'mono_logger'
 end

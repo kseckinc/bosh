@@ -25,13 +25,13 @@ describe 'multiple persistent disks', type: :integration do
       {
         'name' => 'low-performance-disk-type',
         'disk_size' => low_perf_disk_size,
-        'cloud_properties' => {'type' => 'gp2'}
+        'cloud_properties' => { 'type' => 'gp2' },
       },
       {
         'name' => 'high-performance-disk-type',
         'disk_size' => high_perf_disk_size,
-        'cloud_properties' => {'type' => 'io1'}
-      }
+        'cloud_properties' => { 'type' => 'io1' },
+      },
     ]
     hash
   end
@@ -42,18 +42,18 @@ describe 'multiple persistent disks', type: :integration do
   let(:manifest_hash) do
     {
       'name' => 'simple',
-      'releases' =>[{'name' => 'bosh-release', 'version' => '0.1-dev'}],
+      'releases' => [{ 'name' => 'bosh-release', 'version' => '0.1-dev' }],
       'update' => {
-        'canaries' =>2,
-        'canary_watch_time' =>4000,
-        'max_in_flight' =>1,
-        'update_watch_time' =>20
+        'canaries' => 2,
+        'canary_watch_time' => 4000,
+        'max_in_flight' => 1,
+        'update_watch_time' => 20,
       },
       'instance_groups' => [instance_group],
       'stemcells' => [{
         'name' => 'ubuntu-stemcell',
         'version' => '1',
-        'alias' => 'default'
+        'alias' => 'default',
       }],
     }
   end
@@ -66,37 +66,37 @@ describe 'multiple persistent disks', type: :integration do
           'name' => 'disk_using_job',
           'release' => 'bosh-release',
           'consumes' => {
-            'slow-disk-link-name' => {'from' => 'low-iops-persistent-disk-name'},
-            'fast-disk-link-name' => {'from' => 'high-iops-persistent-disk-name'},
-          }
-        }
+            'slow-disk-link-name' => { 'from' => 'low-iops-persistent-disk-name' },
+            'fast-disk-link-name' => { 'from' => 'high-iops-persistent-disk-name' },
+          },
+        },
       ],
       'vm_type' => 'a',
       'stemcell' => 'default',
       'instances' => 1,
-      'networks' => [{'name' => 'a'}],
-      'persistent_disks' => [low_iops_persistent_disk, high_iops_persistent_disk]
+      'networks' => [{ 'name' => 'a' }],
+      'persistent_disks' => [low_iops_persistent_disk, high_iops_persistent_disk],
     }
   end
 
   let(:low_iops_persistent_disk) do
     {
       'type' => 'low-performance-disk-type',
-      'name' => 'low-iops-persistent-disk-name'
+      'name' => 'low-iops-persistent-disk-name',
     }
   end
 
   let(:high_iops_persistent_disk) do
     {
       'type' => 'high-performance-disk-type',
-      'name' => 'high-iops-persistent-disk-name'
+      'name' => 'high-iops-persistent-disk-name',
     }
   end
 
   let(:additional_persistent_disk) do
     {
       'type' => 'low-performance-disk-type',
-      'name' => 'additional-persistent-disk-name'
+      'name' => 'additional-persistent-disk-name',
     }
   end
 
@@ -112,21 +112,21 @@ describe 'multiple persistent disks', type: :integration do
     vm_cid = director.instances.first.vm_cid
     disk_infos = current_sandbox.cpi.attached_disk_infos(vm_cid)
     expect(disk_infos).to match([
-      {
-        'size' => 1024,
-        'cloud_properties' => {'type' => 'gp2'},
-        'vm_locality' => String,
-        'disk_cid' => String,
-        'device_path' => 'attached'
-      },
-      {
-        'size' => 4096,
-        'cloud_properties' => {'type' => 'io1'},
-        'vm_locality' => String,
-        'disk_cid' => String,
-        'device_path' => 'attached'
-      }
-    ])
+                                  {
+                                    'size' => 1024,
+                                    'cloud_properties' => { 'type' => 'gp2' },
+                                    'vm_locality' => String,
+                                    'disk_cid' => String,
+                                    'device_path' => 'attached',
+                                  },
+                                  {
+                                    'size' => 4096,
+                                    'cloud_properties' => { 'type' => 'io1' },
+                                    'vm_locality' => String,
+                                    'disk_cid' => String,
+                                    'device_path' => 'attached',
+                                  },
+                                ])
 
     original_disk_cids = disk_infos.map { |disk_info| disk_info['disk_cid'] }
 
@@ -135,28 +135,28 @@ describe 'multiple persistent disks', type: :integration do
 
     new_disk_infos = current_sandbox.cpi.attached_disk_infos(vm_cid)
     expect(new_disk_infos).to match([
-      {
-        'size' => 1024,
-        'cloud_properties' => {'type' => 'gp2'},
-        'vm_locality' => String,
-        'disk_cid' => String,
-        'device_path' => 'attached'
-      },
-      {
-        'size' => 4096,
-        'cloud_properties' => {'type' => 'io1'},
-        'vm_locality' => String,
-        'disk_cid' => String,
-        'device_path' => 'attached'
-      },
-      {
-        'size' => 1024,
-        'cloud_properties' => {'type' => 'gp2'},
-        'vm_locality' => String,
-        'disk_cid' => String,
-        'device_path' => 'attached'
-      }
-    ])
+                                      {
+                                        'size' => 1024,
+                                        'cloud_properties' => { 'type' => 'gp2' },
+                                        'vm_locality' => String,
+                                        'disk_cid' => String,
+                                        'device_path' => 'attached',
+                                      },
+                                      {
+                                        'size' => 4096,
+                                        'cloud_properties' => { 'type' => 'io1' },
+                                        'vm_locality' => String,
+                                        'disk_cid' => String,
+                                        'device_path' => 'attached',
+                                      },
+                                      {
+                                        'size' => 1024,
+                                        'cloud_properties' => { 'type' => 'gp2' },
+                                        'vm_locality' => String,
+                                        'disk_cid' => String,
+                                        'device_path' => 'attached',
+                                      },
+                                    ])
 
     additional_disk_cids = new_disk_infos.map { |disk_info| disk_info['disk_cid'] }
     expect(additional_disk_cids).to include(*original_disk_cids)
@@ -166,21 +166,21 @@ describe 'multiple persistent disks', type: :integration do
 
     down_scaled_disk_infos = current_sandbox.cpi.attached_disk_infos(vm_cid)
     expect(down_scaled_disk_infos).to match([
-      {
-        'size' => 1024,
-        'cloud_properties' => {'type' => 'gp2'},
-        'vm_locality' => String,
-        'disk_cid' => String,
-        'device_path' => 'attached'
-      },
-      {
-        'size' => 4096,
-        'cloud_properties' => {'type' => 'io1'},
-        'vm_locality' => String,
-        'disk_cid' => String,
-        'device_path' => 'attached'
-      }
-    ])
+                                              {
+                                                'size' => 1024,
+                                                'cloud_properties' => { 'type' => 'gp2' },
+                                                'vm_locality' => String,
+                                                'disk_cid' => String,
+                                                'device_path' => 'attached',
+                                              },
+                                              {
+                                                'size' => 4096,
+                                                'cloud_properties' => { 'type' => 'io1' },
+                                                'vm_locality' => String,
+                                                'disk_cid' => String,
+                                                'device_path' => 'attached',
+                                              },
+                                            ])
 
     expect(down_scaled_disk_infos.map { |disk_info| disk_info['disk_cid'] }).to eq(original_disk_cids)
   end
@@ -188,10 +188,10 @@ describe 'multiple persistent disks', type: :integration do
   it 'provides links for the persistent disks' do
     instance = director.instances.first
     template_content = instance.read_job_template('disk_using_job', 'disknames.json')
-    expect(JSON.parse(template_content)).to eq({
-      'slow-disk' => {'name' => 'low-iops-persistent-disk-name'},
-      'fast-disk' => {'name' => 'high-iops-persistent-disk-name'}
-    })
+    expect(JSON.parse(template_content)).to eq(
+      'slow-disk' => { 'name' => 'low-iops-persistent-disk-name' },
+      'fast-disk' => { 'name' => 'high-iops-persistent-disk-name' },
+    )
   end
 
   it 'notifies the agent of the name and volume information' do
@@ -204,7 +204,7 @@ describe 'multiple persistent disks', type: :integration do
   end
 
   it 'retains the correct disks after recreating the vm' do
-    bosh_runner.run("recreate disk_using_job", manifest_hash: manifest_hash, deployment_name: 'simple')
+    bosh_runner.run('recreate disk_using_job', manifest_hash: manifest_hash, deployment_name: 'simple')
 
     agent_dir = current_sandbox.cpi.agent_dir_for_vm_cid(director.instances.first.vm_cid)
 
@@ -217,7 +217,7 @@ describe 'multiple persistent disks', type: :integration do
   it 'does not mount anything' do
     agent_dir = current_sandbox.cpi.agent_dir_for_vm_cid(director.instances.first.vm_cid)
 
-    expect(File.exists?("#{agent_dir}/bosh/mounts.json")).to eq(false)
+    expect(File.exist?("#{agent_dir}/bosh/mounts.json")).to eq(false)
   end
 
   it 'does not mount anything even when disk is formatted and mountable' do
@@ -233,7 +233,7 @@ describe 'multiple persistent disks', type: :integration do
     # Allow restarted agent process time to start
     sleep 1
 
-    expect(File.exists?("#{agent_dir}/bosh/mounts.json")).to eq(false)
+    expect(File.exist?("#{agent_dir}/bosh/mounts.json")).to eq(false)
   end
 
   it 'maintains existing symlinks when new disks are added' do
@@ -288,40 +288,6 @@ describe 'multiple persistent disks', type: :integration do
 
       v2_only_disk_settings_file = "#{agent_dir}/bosh/persistent_disk_hints.json"
       expect(File.exist?(v2_only_disk_settings_file)).to be_falsey
-    end
-  end
-
-  context 'when add_persistent_disk action is not supported in agent (legacy agent)' do
-    let(:cloud_properties) do
-      { 'legacy_agent_path' => get_legacy_agent_path('before-registry-removal-20181001') }
-    end
-
-    let(:cloud_config_hash) do
-      hash = Bosh::Spec::Deployments.simple_cloud_config
-      hash['disk_types'] = [
-        {
-          'name' => 'low-performance-disk-type',
-          'disk_size' => low_perf_disk_size,
-          'cloud_properties' => { 'type' => 'gp2' },
-        },
-        {
-          'name' => 'high-performance-disk-type',
-          'disk_size' => high_perf_disk_size,
-          'cloud_properties' => { 'type' => 'io1' },
-        },
-      ]
-
-      hash['vm_types'][0]['cloud_properties'] = cloud_properties
-      hash
-    end
-
-    it 'should get response from agent' do
-      ignored_messages = get_agent_ignored_messages(@deploy_output)
-      expect(ignored_messages).to include(
-        "add_persistent_disk 'unknown message' error from the agent: "\
-        '#<Bosh::Director::RpcRemoteException: unknown message add_persistent_disk>',
-      )
-      expect(ignored_messages.count).to eq(2)
     end
   end
 end

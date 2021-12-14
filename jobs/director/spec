@@ -435,15 +435,6 @@ properties:
   agent.env.bosh:
     description: Base env for agent
     default: {}
-  registry.address:
-    description: Address of the Registry to connect to
-  registry.port:
-    description: Port of the Registry to connect to
-    default: 25777
-  registry.username:
-    description: User to access the Registry
-  registry.password:
-    description: Password to access the Registry
 
   # Indicators
   # Indicators are meant to be consumed by downstream services, bosh does not send any alerts based on the indicators

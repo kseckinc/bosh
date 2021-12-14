@@ -21,9 +21,7 @@ module Bosh
 
         @supported_formats = context['formats'] || ['dummy']
         @base_dir = options['dir']
-        if @base_dir.nil?
-          raise ArgumentError, 'Must specify dir'
-        end
+        raise ArgumentError, 'Must specify dir' if @base_dir.nil?
 
         @running_vms_dir = File.join(@base_dir, 'running_vms')
         @vm_repo = VMRepo.new(@running_vms_dir)
@@ -32,9 +30,9 @@ module Bosh
 
         @logger = Logging::Logger.new('DummyCPI')
         @logger.add_appenders(Logging.appenders.io(
-            'DummyCPIIO',
-            options['log_buffer'] || STDOUT
-          ))
+                                'DummyCPIIO',
+                                options['log_buffer'] || STDOUT,
+                              ))
 
         @commands = CommandTransport.new(@base_dir, @logger)
         @inputs_recorder = InputsRecorder.new(@base_dir, @logger, @context)
@@ -44,12 +42,12 @@ module Bosh
         raise ArgumentError, "cannot create dummy cloud base directory #{@base_dir}"
       end
 
-      CREATE_STEMCELL_SCHEMA = Membrane::SchemaParser.parse { {image_path: String, cloud_properties: Hash} }
+      CREATE_STEMCELL_SCHEMA = Membrane::SchemaParser.parse { { image_path: String, cloud_properties: Hash } }
       def create_stemcell(image_path, cloud_properties)
         validate_and_record_inputs(CREATE_STEMCELL_SCHEMA, __method__, image_path, cloud_properties)
 
         content = File.read(image_path)
-        data = YAML.load(content)
+        data = YAML.safe_load(content)
         data.merge!('image' => image_path)
         stemcell_id = SecureRandom.uuid
 
@@ -57,7 +55,7 @@ module Bosh
         stemcell_id
       end
 
-      DELETE_STEMCELL_SCHEMA = Membrane::SchemaParser.parse { {stemcell_id: String} }
+      DELETE_STEMCELL_SCHEMA = Membrane::SchemaParser.parse { { stemcell_id: String } }
       def delete_stemcell(stemcell_id)
         validate_and_record_inputs(DELETE_STEMCELL_SCHEMA, __method__, stemcell_id)
         FileUtils.rm(stemcell_file(stemcell_id))
@@ -83,21 +81,19 @@ module Bosh
         ips = []
         cmd = commands.next_create_vm_cmd
 
-        if cmd.failed?
-          raise Bosh::Clouds::CloudError.new('Creating vm failed')
-        end
+        raise Bosh::Clouds::CloudError, 'Creating vm failed' if cmd.failed?
 
         networks.each do |network_name, network|
           if network['type'] != 'dynamic'
             ips << { 'network' => network_name, 'ip' => network.fetch('ip') }
           else
-            if cmd.ip_address
-              ip_address = cmd.ip_address
-            elsif cloud_properties['az_name']
-              ip_address = cmd.ip_address_for_az(cloud_properties['az_name'])
-            else
-              ip_address =  NetAddr::CIDRv4.new(rand(0..4294967295)).ip #collisions?
-            end
+            ip_address = if cmd.ip_address
+                           cmd.ip_address
+                         elsif cloud_properties['az_name']
+                           cmd.ip_address_for_az(cloud_properties['az_name'])
+                         else
+                           NetAddr::CIDRv4.new(rand(0..4294967295)).ip # collisions?
+                         end
 
             if ip_address
               ips << { 'network' => network_name, 'ip' => ip_address }
@@ -108,17 +104,16 @@ module Bosh
 
         allocate_ips(ips)
 
-        write_agent_settings(agent_id, {
-            agent_id: agent_id,
-            blobstore: @options['agent']['blobstore'],
-            ntp: [],
-            disks: { persistent: {} },
-            networks: networks,
-            vm: { name: "vm-#{agent_id}" },
-            cert: '',
-            env: env,
-            mbus: @options['nats'],
-          })
+        write_agent_settings(agent_id,
+                             agent_id: agent_id,
+                             blobstore: @options['agent']['blobstore'],
+                             ntp: [],
+                             disks: { persistent: {} },
+                             networks: networks,
+                             vm: { name: "vm-#{agent_id}" },
+                             cert: '',
+                             env: env,
+                             mbus: @options['nats'])
 
         agent_process_agent_id = agent_id
         if commands.create_vm_unresponsive_agent ||
@@ -134,30 +129,27 @@ module Bosh
         vm.id
       end
 
-      DELETE_VM_SCHEMA = Membrane::SchemaParser.parse { {vm_cid: String} }
+      DELETE_VM_SCHEMA = Membrane::SchemaParser.parse { { vm_cid: String } }
       def delete_vm(vm_cid)
         validate_and_record_inputs(DELETE_VM_SCHEMA, __method__, vm_cid)
         commands.wait_for_unpause_delete_vms
         detach_disks_attached_to_vm(vm_cid)
         agent_pid = vm_cid.to_i
         Process.kill('KILL', agent_pid)
-
-          # rubocop:disable HandleExceptions
       rescue Errno::ESRCH
         raise Bosh::Clouds::VMNotFound if commands.raise_vmnotfound
-        # rubocop:enable HandleExceptions
       ensure
         free_ips(vm_cid)
         FileUtils.rm_rf(File.join(@base_dir, 'running_vms', vm_cid))
       end
 
-      REBOOT_VM_SCHEMA = Membrane::SchemaParser.parse { {vm_cid: String} }
+      REBOOT_VM_SCHEMA = Membrane::SchemaParser.parse { { vm_cid: String } }
       def reboot_vm(vm_cid)
         validate_and_record_inputs(__method__, vm_cid)
         raise NotImplemented, 'Dummy CPI does not implement reboot_vm'
       end
 
-      HAS_VM_SCHEMA = Membrane::SchemaParser.parse { {vm_cid: String} }
+      HAS_VM_SCHEMA = Membrane::SchemaParser.parse { { vm_cid: String } }
       def has_vm(vm_cid)
         validate_and_record_inputs(HAS_VM_SCHEMA, __method__, vm_cid)
         @vm_repo.exists?(vm_cid)
@@ -172,21 +164,20 @@ module Bosh
         end
       end
 
-      HAS_DISK_SCHEMA = Membrane::SchemaParser.parse { {disk_id: String} }
+      HAS_DISK_SCHEMA = Membrane::SchemaParser.parse { { disk_id: String } }
       def has_disk(disk_id)
         validate_and_record_inputs(HAS_DISK_SCHEMA, __method__, disk_id)
-        File.exists?(disk_file(disk_id))
+        File.exist?(disk_file(disk_id))
       end
 
-      ATTACH_DISK_SCHEMA = Membrane::SchemaParser.parse { {vm_cid: String, disk_id: String} }
+      ATTACH_DISK_SCHEMA = Membrane::SchemaParser.parse { { vm_cid: String, disk_id: String } }
       def attach_disk(vm_cid, disk_id)
         validate_and_record_inputs(ATTACH_DISK_SCHEMA, __method__, vm_cid, disk_id)
 
         raise Bosh::Clouds::NotImplemented, 'Bosh::Clouds::NotImplemented' if commands.raise_attach_disk_not_implemented
 
-        if disk_attached?(disk_id)
-          raise "#{disk_id} is already attached to an instance"
-        end
+        raise "#{disk_id} is already attached to an instance" if disk_attached?(disk_id)
+
         file = attachment_file(vm_cid, disk_id)
         FileUtils.mkdir_p(File.dirname(file))
         FileUtils.touch(file)
@@ -199,7 +190,7 @@ module Bosh
         write_agent_settings(agent_id, settings)
       end
 
-      DETACH_DISK_SCHEMA = Membrane::SchemaParser.parse { {vm_cid: String, disk_id: String} }
+      DETACH_DISK_SCHEMA = Membrane::SchemaParser.parse { { vm_cid: String, disk_id: String } }
       def detach_disk(vm_cid, disk_id)
         validate_and_record_inputs(DETACH_DISK_SCHEMA, __method__, vm_cid, disk_id)
 
@@ -208,6 +199,7 @@ module Bosh
         unless disk_attached_to_vm?(vm_cid, disk_id)
           raise Bosh::Clouds::DiskNotAttached, "#{disk_id} is not attached to instance #{vm_cid}"
         end
+
         FileUtils.rm_rf(attachment_path(disk_id))
 
         agent_id = agent_id_for_vm_id(vm_cid)
@@ -216,18 +208,18 @@ module Bosh
         write_agent_settings(agent_id, settings)
       end
 
-      CREATE_DISK_SCHEMA = Membrane::SchemaParser.parse { {size: Integer, cloud_properties: Hash, vm_locality: String} }
+      CREATE_DISK_SCHEMA = Membrane::SchemaParser.parse { { size: Integer, cloud_properties: Hash, vm_locality: String } }
       def create_disk(size, cloud_properties, vm_locality)
         validate_and_record_inputs(CREATE_DISK_SCHEMA, __method__, size, cloud_properties, vm_locality)
         disk_id = SecureRandom.hex
         file = disk_file(disk_id)
         FileUtils.mkdir_p(File.dirname(file))
-        disk_info = JSON.generate({size: size, cloud_properties: cloud_properties, vm_locality: vm_locality})
+        disk_info = JSON.generate(size: size, cloud_properties: cloud_properties, vm_locality: vm_locality)
         File.write(file, disk_info)
         disk_id
       end
 
-      DELETE_DISK_SCHEMA = Membrane::SchemaParser.parse { {disk_id: String} }
+      DELETE_DISK_SCHEMA = Membrane::SchemaParser.parse { { disk_id: String } }
       def delete_disk(disk_id)
         validate_and_record_inputs(DELETE_DISK_SCHEMA, __method__, disk_id)
         FileUtils.rm(disk_file(disk_id))
@@ -270,13 +262,13 @@ module Bosh
         snapshot_id
       end
 
-      DELETE_SNAPSHOT_SCHEMA = Membrane::SchemaParser.parse { {snapshot_id: String} }
+      DELETE_SNAPSHOT_SCHEMA = Membrane::SchemaParser.parse { { snapshot_id: String } }
       def delete_snapshot(snapshot_id)
         validate_and_record_inputs(DELETE_SNAPSHOT_SCHEMA, __method__, snapshot_id)
         FileUtils.rm(snapshot_file(snapshot_id))
       end
 
-      RESIZE_DISK_SCHEMA = Membrane::SchemaParser.parse { {disk_id: String, new_size: Integer } }
+      RESIZE_DISK_SCHEMA = Membrane::SchemaParser.parse { { disk_id: String, new_size: Integer } }
       def resize_disk(disk_id, new_size)
         validate_and_record_inputs(RESIZE_DISK_SCHEMA, __method__, disk_id, new_size)
 
@@ -288,30 +280,31 @@ module Bosh
         File.write(disk_info_file, JSON.generate(disk_info))
       end
 
-      SET_VM_METADATA_SCHEMA = Membrane::SchemaParser.parse { {vm_cid: String, metadata: Hash} }
+      SET_VM_METADATA_SCHEMA = Membrane::SchemaParser.parse { { vm_cid: String, metadata: Hash } }
       def set_vm_metadata(vm_cid, metadata)
         raise 'Set VM metadata failed!!!' if commands.set_vm_metadata_should_fail?
+
         validate_and_record_inputs(SET_VM_METADATA_SCHEMA, __method__, vm_cid, metadata)
       end
 
-      SET_DISK_METADATA_SCHEMA = Membrane::SchemaParser.parse { {disk_cid: String, metadata: Hash} }
+      SET_DISK_METADATA_SCHEMA = Membrane::SchemaParser.parse { { disk_cid: String, metadata: Hash } }
       def set_disk_metadata(disk_cid, metadata)
         validate_and_record_inputs(SET_DISK_METADATA_SCHEMA, __method__, disk_cid, metadata)
       end
 
-      CALCULATE_VM_CLOUD_PROPERTIES_SCHEMA = Membrane::SchemaParser.parse { { vm_resources: {'ram' => Integer, 'cpu' => Integer, 'ephemeral_disk_size' => Integer} } }
+      CALCULATE_VM_CLOUD_PROPERTIES_SCHEMA = Membrane::SchemaParser.parse { { vm_resources: { 'ram' => Integer, 'cpu' => Integer, 'ephemeral_disk_size' => Integer } } }
       def calculate_vm_cloud_properties(vm_resources)
         validate_and_record_inputs(
           CALCULATE_VM_CLOUD_PROPERTIES_SCHEMA,
           __method__,
-          vm_resources
+          vm_resources,
         )
         instance_type = @context['cvcpkey'].nil? ? 'dummy' : @context['cvcpkey']
         {
           instance_type: instance_type,
           cpu: vm_resources['cpu'],
           ram: vm_resources['ram'],
-          ephemeral_disk: { size: vm_resources['ephemeral_disk_size'] }
+          ephemeral_disk: { size: vm_resources['ephemeral_disk_size'] },
         }
       end
 
@@ -349,9 +342,7 @@ module Bosh
 
       def kill_process(agent_pid)
         Process.kill('KILL', agent_pid.to_i)
-        # rubocop:disable HandleExceptions
       rescue Errno::ESRCH
-        # rubocop:enable HandleExceptions
       end
 
       def agent_log_path(agent_id)
@@ -377,7 +368,7 @@ module Bosh
           [].tap do |results|
             files.each do |file|
               # data --> [{ 'name' => 'ubuntu-stemcell', 'version': '1', 'image' => <image path> }]
-              data = YAML.load(File.read(file))
+              data = YAML.safe_load(File.read(file))
               results << { 'id' => file.sub(/^stemcell_/, '') }.merge(data)
             end
           end.sort { |a, b| a[:version].to_i <=> b[:version].to_i }
@@ -389,7 +380,7 @@ module Bosh
       end
 
       def all_snapshots
-        if File.exists?(snapshot_file(''))
+        if File.exist?(snapshot_file(''))
           Dir.glob(snapshot_file('*'))
         else
           []
@@ -420,7 +411,7 @@ module Bosh
       def attached_disk_infos(vm_cid)
         agent_id = agent_id_for_vm_id(vm_cid)
         settings = read_agent_settings(agent_id)
-        return [] unless settings.has_key?('disks') && settings['disks'].has_key?('persistent')
+        return [] unless settings.key?('disks') && settings['disks'].key?('persistent')
 
         settings['disks']['persistent'].inject([]) do |memo, disk_attachment|
           disk_cid = disk_attachment[0]
@@ -444,17 +435,15 @@ module Bosh
         agent_pid = Process.spawn(
           { 'TMPDIR' => @tmp_dir },
           *agent_cmd,
-          {
-            chdir: agent_base_dir(agent_id),
-            out: agent_log,
-            err: agent_log,
-          }
+          chdir: agent_base_dir(agent_id),
+          out: agent_log,
+          err: agent_log,
         )
 
         begin
           Process.getpgid(agent_pid)
-        rescue => e
-          raise RuntimeError, "Expected agent to be running: #{e}"
+        rescue StandardError => e
+          raise "Expected agent to be running: #{e}"
         end
 
         Process.detach(agent_pid)
@@ -466,20 +455,19 @@ module Bosh
 
       def allocate_ips(ips)
         ips.each do |ip|
-          begin
-            network_dir = File.join(@base_dir, 'dummy_cpi_networks')
-            FileUtils.makedirs(network_dir)
-            File.open(File.join(network_dir, ip['ip']), File::WRONLY|File::CREAT|File::EXCL).close
-          rescue Errno::EEXIST
-            # at this point we should actually free all the IPs we successfully allocated before the collision,
-            # but in practice the tests only feed in one IP per VM so that cleanup code would never be exercised
-            raise "IP Address #{ip['ip']} in network '#{ip['network']}' is already in use"
-          end
+          network_dir = File.join(@base_dir, 'dummy_cpi_networks')
+          FileUtils.makedirs(network_dir)
+          File.open(File.join(network_dir, ip['ip']), File::WRONLY | File::CREAT | File::EXCL).close
+        rescue Errno::EEXIST
+          # at this point we should actually free all the IPs we successfully allocated before the collision,
+          # but in practice the tests only feed in one IP per VM so that cleanup code would never be exercised
+          raise "IP Address #{ip['ip']} in network '#{ip['network']}' is already in use"
         end
       end
 
       def free_ips(vm_cid)
         return unless @vm_repo.exists?(vm_cid)
+
         vm = @vm_repo.load(vm_cid)
         vm.ips.each do |ip|
           FileUtils.rm_rf(File.join(@base_dir, 'dummy_cpi_networks', ip['ip']))
@@ -514,11 +502,11 @@ module Bosh
       end
 
       def agent_cmd(agent_id, legacy_agent_path)
-        if legacy_agent_path.nil?
-          go_agent_exe =  File.expand_path('../../../../go/src/github.com/cloudfoundry/bosh-agent/out/bosh-agent', __FILE__)
-        else
-          go_agent_exe = legacy_agent_path
-        end
+        go_agent_exe = if legacy_agent_path.nil?
+                         File.expand_path('../../../go/src/github.com/cloudfoundry/bosh-agent/out/bosh-agent', __dir__)
+                       else
+                         legacy_agent_path
+                       end
 
         agent_config_file = File.join(agent_base_dir(agent_id), 'agent.json')
 
@@ -526,12 +514,11 @@ module Bosh
           'Infrastructure' => {
             'Settings' => {
               'Sources' => [{
-                  'Type' => 'File',
-                  'SettingsPath' => agent_settings_file(agent_id)
-                }],
-              'UseRegistry' => true
-            }
-          }
+                'Type' => 'File',
+                'SettingsPath' => agent_settings_file(agent_id),
+              }],
+            },
+          },
         }
 
         File.write(agent_config_file, JSON.generate(agent_config))
@@ -583,8 +570,8 @@ module Bosh
         parameter_names_to_values = parameter_names_to_values(the_method, *args)
         begin
           schema.validate(parameter_names_to_values)
-        rescue Membrane::SchemaValidationError => err
-          raise ArgumentError, "Invalid arguments sent to #{the_method}: #{err.message}"
+        rescue Membrane::SchemaValidationError => e
+          raise ArgumentError, "Invalid arguments sent to #{the_method}: #{e.message}"
         end
         record_inputs(the_method, parameter_names_to_values)
       end
@@ -626,7 +613,7 @@ module Bosh
         def wait_for_delete_vms
           @logger.debug('Wait for delete_vms')
           path = File.join(@cpi_commands, 'wait_for_unpause_delete_vms')
-          sleep(0.1) until File.exists?(path)
+          sleep(0.1) until File.exist?(path)
         end
 
         def wait_for_unpause_delete_vms
@@ -635,10 +622,8 @@ module Bosh
           File.write(path, 'marker')
 
           path = File.join(@cpi_commands, 'pause_delete_vms')
-          if File.exists?(path)
-            @logger.debug('Wait for unpausing delete_vms')
-          end
-          sleep(0.1) while File.exists?(path)
+          @logger.debug('Wait for unpausing delete_vms') if File.exist?(path)
+          sleep(0.1) while File.exist?(path)
         end
 
         def make_create_vm_always_use_dynamic_ip(ip_address)
@@ -666,9 +651,9 @@ module Bosh
 
         def next_create_vm_cmd
           @logger.debug('Reading create_vm configuration')
-          ip_address = File.read(always_path) if File.exists?(always_path)
-          azs_to_ip = File.exists?(azs_path) ? JSON.load(File.read(azs_path)) : {}
-          failed = File.exists?(failed_path)
+          ip_address = File.read(always_path) if File.exist?(always_path)
+          azs_to_ip = File.exist?(azs_path) ? JSON.load(File.read(azs_path)) : {}
+          failed = File.exist?(failed_path)
           CreateVmCommand.new(ip_address, azs_to_ip, failed)
         end
 
@@ -696,7 +681,7 @@ module Bosh
 
         def raise_vmnotfound
           @logger.info('Reading delete_vm configuration')
-          File.exists?(raise_vmnotfound_path)
+          File.exist?(raise_vmnotfound_path)
         end
 
         def allow_detach_disk_to_succeed
@@ -843,7 +828,7 @@ module Bosh
 
         def record(method, args)
           FileUtils.mkdir_p(@cpi_inputs_dir)
-          data = {method_name: method, inputs: args, context: @context}
+          data = { method_name: method, inputs: args, context: @context }
           @logger.debug("Saving input for #{method} <redacted> #{ordered_file_path}")
           File.open(ordered_file_path, 'a') { |f| f.puts(JSON.dump(data)) }
         end
@@ -885,15 +870,15 @@ module Bosh
         end
 
         def exists?(id)
-          File.exists?(vm_file(id))
+          File.exist?(vm_file(id))
         end
 
         def save(vm)
-          serialized_vm = JSON.dump({
-              'agent_id' => vm.agent_id,
-              'cloud_properties' => vm.cloud_properties,
-              'ips' => vm.ips,
-            })
+          serialized_vm = JSON.dump(
+            'agent_id' => vm.agent_id,
+            'cloud_properties' => vm.cloud_properties,
+            'ips' => vm.ips,
+          )
 
           File.write(vm_file(vm.id), serialized_vm)
         end

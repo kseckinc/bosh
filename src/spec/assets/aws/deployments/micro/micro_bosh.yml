@@ -34,7 +34,3 @@ apply_spec:
       address: <%= ENV["MICROBOSH_IP"] %>
     nats:
       address: <%= ENV["MICROBOSH_IP"] %>
-  properties:
-    registry:
-      address: <%= ENV["MICROBOSH_IP"] %>
-
